@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from app.routers import worker as router_worker
+from app.routers import node_health as router_node_health
 from app.routers import dispatch as router_dispatch
 from app.routers import crawljob as router_crawljob
 from app.routers import urlfilter as router_urlfilter
@@ -24,4 +25,4 @@ from app.routers import scrapeapi as router_scrapeapi
 from app.routers import datasample as router_datasample
 from app.routers import alertpolicy as router_alertpolicy
 
-ROUTERS = [router_worker, router_dispatch, router_crawljob, router_urlfilter, router_dnsresolver, router_contentextract, router_storagestrategy, router_rendertask, router_qualityreport, router_bandwidth, router_retryqueue, router_pagemarker, router_incrementmark, router_configsync, router_scrapeapi, router_datasample, router_alertpolicy]
+ROUTERS = [router_worker, router_node_health, router_dispatch, router_crawljob, router_urlfilter, router_dnsresolver, router_contentextract, router_storagestrategy, router_rendertask, router_qualityreport, router_bandwidth, router_retryqueue, router_pagemarker, router_incrementmark, router_configsync, router_scrapeapi, router_datasample, router_alertpolicy]

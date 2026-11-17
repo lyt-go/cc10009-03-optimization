@@ -49,8 +49,9 @@ npm run dev
 
 | 模块 | 目录 | 业务对象 | 主要字段 |
 | --- | --- | --- | --- |
-| 采集节点 | `worker` | 工作节点 | 节点编号、主机地址、并发槽位数 |
-| 请求分配 | `dispatch` | 分配策略 | 策略编号、目标域名、分配算法 |
+| 采集节点 | `worker` | 工作节点 | 节点编号、主机地址、并发槽位数、心跳、人工状态 |
+| 节点健康 | `node_health` | 健康统计与可调度节点结果 | 健康状态、不可调度原因、快照版本、幂等键 |
+| 请求分配 | `dispatch` | 分配策略 | 策略编号、目标域名、分配算法、分流快照版本 |
 | 抓取作业 | `crawljob` | 作业定义 | 作业编号、目标站点、起始URL |
 | URL过滤 | `urlfilter` | 过滤规则 | 规则编号、包含模式、排除模式 |
 | DNS解析 | `dnsresolver` | 解析配置 | 配置编号、域名模式、DNS服务器 |
@@ -73,6 +74,48 @@ npm run dev
   `backend/app/routers/<模块>.py`，业务规则在 `backend/app/services/<模块>.py`。
 - 列表接口统一返回 `{ items, total, page, size }`，动作接口统一返回 `{ ok, message }`。
 - 状态流转只允许在 `app/services` 里改，路由层不做业务判断。
+
+## 节点健康统计与可调度节点结果
+
+采集节点的心跳、资源占用（槽位/CPU/内存）与人工状态三类信号，沿一条链路聚合，
+节点清单、健康统计与请求分配使用同一个可用性口径：
+
+```text
+心跳 / 资源占用 / 人工状态
+  -> 健康评估（冲突优先级：人工状态 > 心跳时效 > 资源耗尽）
+  -> 健康统计（在线/离线/资源耗尽三态互斥且穷尽，计数钳制在 [0, 节点总数]）
+  -> 可调度节点结果（版本化、不可变、可按记录回溯）
+  -> 同步到流量分配侧清单（各目标域名读取同一版快照更新分流结果）
+```
+
+关键约束及落地方式：
+
+- **口径一致**：健康三态由 `NodeHealthService.evaluate_node` 单点计算，前端不重复评估；
+  筛选字段、清除筛选后的总数、资源耗尽原因共用同一份记录。
+- **不重复计数**：评估前按节点 id 去重；批量人工变更对重复 id 只处理一次。
+- **计数有界**：三态计数显式钳制并校验“三态之和=节点总数”，批量变更期间不出现负数或越界。
+- **并发只出一份**：快照生成用“生成轮次屏障 + 信号版本合并窗”，并发上报只产生一版结果，
+  不会出现版本相互覆盖；信号变化后立即生成新版本，节点恢复不会被旧版本合并。
+- **幂等提交**：同 `idempotency_key` 重复提交直接回放原版本，不产生新版本。
+- **可回溯**：健康统计、可调度快照均版本化只追加；节点事件流记录心跳、人工变更、
+  入集/出集/重新入集与快照同步，恢复在线有可解释的重新入集记录。
+- **分流同步**：`sync-dispatch` 让所有目标域名读取同一版快照，按节点亲和性更新分流结果，
+  并把版本号回写到每条分配策略，下游经 `/api/dispatch/snapshot/current` 读取。
+
+主要接口（前缀 `/api`）：
+
+- `GET /node-health/overview`：在线/离线/资源耗尽卡片与口径核对
+- `GET /node-health/records`：健康记录筛选（`health_status`、`exhaustion_reason`、`keyword`）
+- `POST /node-health/aggregate`：手动聚合一版健康统计
+- `GET /node-health/stats`、`GET /node-health/stats/{id}`：统计历史与单版本回溯
+- `POST /node-health/snapshots`：生成可调度节点结果（body 可带 `idempotency_key`）
+- `GET /node-health/snapshots`、`/snapshots/latest`、`/snapshots/{id}`：版本列表与回溯
+- `POST /node-health/snapshots/sync-dispatch`：同步到流量分配侧清单
+- `GET /node-health/events`：节点事件审计流
+- `POST /worker/{id}/heartbeat`、`POST /worker/{id}/manual-status`、`POST /worker/batch/manual-status`
+
+演示环境带心跳模拟器（`heartbeat_simulator.py`，随 FastAPI 生命周期启停），
+持续刷新活跃节点心跳；心跳过期（WORK-0004）与人工维护（WORK-0008）节点不模拟，保留真实离线样本。
 
 领域：数据工程
 子方向：数据采集、爬虫与RPA

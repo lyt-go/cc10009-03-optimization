@@ -31,5 +31,46 @@ body { margin: 0; background: #f6f8fb; color: #1f2937; }
 .btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
 .btn.ghost { background: transparent; }
 .link { border: none; background: none; color: var(--brand); cursor: pointer; padding: 0; }
-.page-foot { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--muted); }
+.page-foot { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-top: 8px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
 .error-text { color: #b42318; }
+.notice-text { color: #067647; }
+
+/* 健康状态徽章：三态互斥，颜色与后端口径一一对应 */
+.badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; white-space: nowrap; }
+.badge-online { background: #e7f6ec; color: #067647; border: 1px solid #a6e3c0; }
+.badge-offline { background: #f2f4f7; color: #475467; border: 1px solid #d0d5dd; }
+.badge-exhausted { background: #fef4e6; color: #b54708; border: 1px solid #f7d9a8; }
+
+.stat-card-compact { padding: 8px 10px; }
+.stat-card-compact .stat-value { font-size: 17px; }
+.reason-row { margin-bottom: 6px; }
+.stat-value-small { font-size: 13px; font-weight: 600; }
+.check-line { font-size: 12px; color: var(--muted); display: flex; gap: 14px; flex-wrap: wrap; margin: 0 0 12px; }
+.check-ok { color: #067647; }
+.check-bad { color: #b42318; font-weight: 600; }
+
+.switch-item { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.filter-item select, .batch-bar select { height: 30px; border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; background: #fff; font-size: 13px; }
+.col-check { width: 40px; text-align: center; }
+
+.batch-bar { display: flex; gap: 10px; align-items: center; background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; font-size: 13px; }
+.foot-actions { display: flex; gap: 8px; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* 可调度节点结果页 */
+.idem-input { height: 32px; border: 1px solid var(--border); border-radius: 6px; padding: 0 10px; font-size: 13px; width: 220px; }
+.tab-bar { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+.tab-item { border: none; background: none; padding: 8px 14px; cursor: pointer; font-size: 13px; color: var(--muted); border-bottom: 2px solid transparent; }
+.tab-active { color: var(--brand); border-bottom-color: var(--brand); font-weight: 600; }
+.event-type { color: #1d4ed8; font-size: 12px; }
+.reason-cell { max-width: 320px; font-size: 12px; color: #344054; }
+
+.snapshot-banner { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; background: #eff8ff; border: 1px solid #b2ddff; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; font-size: 13px; }
+.snapshot-tag { font-weight: 600; color: #175cd3; }
+.snapshot-meta { color: #344054; }
+
+/* 明细弹窗 */
+.modal-mask { position: fixed; inset: 0; background: rgba(16, 24, 40, .45); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 24px; }
+.modal-box { background: #fff; border-radius: 10px; width: min(1000px, 100%); max-height: 82vh; overflow: auto; padding: 16px; }
+.modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.modal-head h3 { margin: 0; font-size: 15px; }

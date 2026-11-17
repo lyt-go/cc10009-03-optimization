@@ -5,14 +5,28 @@
 """
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.routers import ROUTERS
+from app.services.heartbeat_simulator import start_heartbeat_simulator
 from app.store import store
 
-app = FastAPI(title="分布式网页抓取调度平台", version="1.0.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 演示环境的心跳模拟：随服务启动，随服务关闭；不影响接口与测试逻辑。
+    stop_event = start_heartbeat_simulator()
+    try:
+        yield
+    finally:
+        stop_event.set()
+
+
+app = FastAPI(title="分布式网页抓取调度平台", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

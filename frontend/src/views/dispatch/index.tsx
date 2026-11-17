@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { request } from '@/api/client'
+import { nodeHealthApi, type DispatchSnapshot } from '@/api/nodeHealth'
 
 const ENDPOINT = '/api/dispatch'
 const columns = [
@@ -46,19 +47,24 @@ export default function DispatchView() {
   const [total, setTotal] = useState(0)
   const [errorMessage, setErrorMessage] = useState('')
   const [filters, setFilters] = useState<Record<string, string>>({})
+  const [dispatchSnapshot, setDispatchSnapshot] = useState<DispatchSnapshot | null>(null)
   const filterFields = useMemo(() => columns.slice(0, 3), [])
 
   const reload = useCallback(async () => {
     setErrorMessage('')
     const query = new URLSearchParams(filters).toString()
     try {
-      const response = await request(`${ENDPOINT}?${query}`)
+      const [response, snapshotResponse] = await Promise.all([
+        request(`${ENDPOINT}?${query}`),
+        nodeHealthApi.dispatchSnapshot().catch(() => ({ snapshot: null })),
+      ])
       if (!response.ok) {
         throw new Error('分配策略列表读取失败')
       }
       const payload = await response.json()
       setRows(payload.items ?? [])
       setTotal(payload.total ?? 0)
+      setDispatchSnapshot(snapshotResponse.snapshot)
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : '请求分配列表读取失败')
     }
@@ -110,6 +116,18 @@ export default function DispatchView() {
         ))}
       </div>
 
+      <div className="snapshot-banner">
+        {dispatchSnapshot ? (
+          <>
+            <span className="snapshot-tag">分流口径版本：{dispatchSnapshot.快照版本}</span>
+            <span className="snapshot-meta">同步时间 {dispatchSnapshot.同步时间}</span>
+            <span className="snapshot-meta">覆盖 {dispatchSnapshot.域名分流结果数} 个目标域名，可调度节点 {dispatchSnapshot.可调度节点数} 个</span>
+          </>
+        ) : (
+          <span className="snapshot-meta">尚未同步可调度节点结果，请到「可调度节点」页面生成并同步分流口径</span>
+        )}
+      </div>
+
       <form className="filter-bar" onSubmit={(event) => { event.preventDefault(); void reload() }}>
         {filterFields.map((field) => (
           <label key={field} className="filter-item">
@@ -129,6 +147,9 @@ export default function DispatchView() {
         <thead>
           <tr>
             {columns.map((column) => <th key={column}>{column}</th>)}
+            <th>分流快照版本</th>
+            <th>分流节点数</th>
+            <th>分流节点清单</th>
             <th>可执行动作</th>
           </tr>
         </thead>
@@ -136,6 +157,9 @@ export default function DispatchView() {
           {rows.map((row) => (
             <tr key={String(row.id)}>
               {columns.map((column) => <td key={column}>{row[column] ?? '—'}</td>)}
+              <td>{row['分流快照版本'] ?? '—'}</td>
+              <td>{row['分流节点数'] ?? '—'}</td>
+              <td className="reason-cell">{row['分流节点清单'] ?? '—'}</td>
               <td className="row-actions">
                 {actions.map((action) => (
                   <button key={action} className="link" type="button" onClick={() => void runAction(action, row)}>
@@ -147,7 +171,7 @@ export default function DispatchView() {
           ))}
           {rows.length === 0 && (
             <tr>
-              <td className="empty-state" colSpan={columns.length + 1}>暂无请求分配数据，可先登记分配策略</td>
+              <td className="empty-state" colSpan={columns.length + 4}>暂无请求分配数据，可先登记分配策略</td>
             </tr>
           )}
         </tbody>
